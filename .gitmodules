@@ -1,0 +1,6 @@
+[submodule "components/switchbot-nimble-client"]
+	path = components/switchbot-nimble-client
+	url = https://github.com/ixsiid/switchbot-nimble-client.git
+[submodule "components/WiFiManager"]
+	path = components/WiFiManager
+	url = https://github.com/ixsiid/WiFiManager.git

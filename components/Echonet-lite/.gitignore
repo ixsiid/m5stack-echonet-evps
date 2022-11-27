@@ -31,13 +31,5 @@
 *.out
 *.app
 
-export.bat
-build
-*.log
-dependencies.lock
-sdkconfig.old
-
-main/wifi_credential.h
-main/switchbot_macaddr.h
-
-memo.md
+.vscode
+.pio
