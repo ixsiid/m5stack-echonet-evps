@@ -29,7 +29,7 @@ Nature Remo Eが家に設置されていれば、「エコネットライト機�
 
 ### 充電・待機コマンドに応じて充電コンセントを操作する
 我が家の充電コンセントはスイッチ付きのタイプです。また、いたずら防止のために簡易ロックのほか、南京錠などを追加で設置することも可能です。
-（~~写真を追加する~~後述の加工前の写真はありません。）
+（~~写真を追加する~~残ってませんでした。）
 
 スイッチを操作すると言ったら、そうSwitchBot Botですね。＜ゃιﾚヽのでリンクは貼りません。
 この[BotをM5Stackから操作するリポジトリ](https://github.com/ixsiid/switchbot-nimble-client)が都合よくあったのでこちらを使えばよさそうです。
@@ -42,12 +42,10 @@ Nature RemoアプリからECHONET Liteプロトコルを通して、EVPSオブ�
 Botをここに設置するために、防水カバーの新設が必要になります。
 既存のカバーを切り抜いて、[Botが収まるカバーを別に製作]https://github.com/ixsiid/m5stack-echonet-evps/releases/tag/v0.0.1)し覆うように設置しました。
 
-![PXL_20221209_023614781 MP](https://user-images.githubusercontent.com/35385895/208040101-179249f9-7177-4afb-a192-374d49f2e6f4.jpg)
-
-![PXL_20221210_020240474](https://user-images.githubusercontent.com/35385895/208040123-712d7807-07d4-4ed0-9112-c722bfebf976.jpg)
-
-![PXL_20221210_020246869](https://user-images.githubusercontent.com/35385895/208040130-0c731ee8-0cac-458b-b99d-d60b7201cf37.jpg)
-
+<img
+ src="https://user-images.githubusercontent.com/35385895/208041078-f824fefc-06e3-4543-bd30-6275e6d588b6.jpg" width="20%" /><img
+ src="https://user-images.githubusercontent.com/35385895/208041065-5d6a5a9a-f866-41e6-8724-5e033057ca4a.jpg" width="20%" /><img 
+ src="https://user-images.githubusercontent.com/35385895/208041076-a0c59897-89f9-4679-a5ab-0a481b60bff5.jpg" width="20%" />
 
 ### 対候性の工夫
 1. 3Dプリント品の上にUVレジンを一度塗布、硬化後に表面を削って滑らかにしています。
