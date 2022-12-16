@@ -54,7 +54,11 @@ Botをここに設置するために、防水カバーの新設が必要にな�
 3. 設置後の隙間にはシリコン充填しています。
 
 ## 動作テスト
-（動画を載せる）
+### EVPS ON
+[![EVPS ONの動作映像](http://img.youtube.com/vi/djXRR8WapNw/0.jpg)](https://www.youtube.com/watch?v=djXRR8WapNw)
+### EVPS OFF
+[![EVPS OFFの動作映像](http://img.youtube.com/vi/P2LOBnNnHTk/0.jpg)](https://www.youtube.com/watch?v=P2LOBnNnHTk)
+
 
 EVPSの操作に応じて、瞬時電力が変わっているのがわかると思います。
 操作から充電までにタイムラグがあるように見えますが、瞬時電力の反映に時間がかかるようです。
