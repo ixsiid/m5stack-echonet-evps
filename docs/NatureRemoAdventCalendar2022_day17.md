@@ -41,7 +41,7 @@ Nature RemoアプリからECHONET Liteプロトコルを通して、EVPSオブ�
 ## 屋外設置
 こちらのコンセント付属のスイッチ、屋外しようということで防水カバーもついており、ストロークも長めのプッシュ-プッシュスイッチになっています。
 Botをここに設置するために、防水カバーの新設が必要になります。
-既存のカバーを切り抜いて、[Botが収まるカバーを別に製作]https://github.com/ixsiid/m5stack-echonet-evps/releases/tag/v0.0.1)し覆うように設置しました。
+既存のカバーを切り抜いて、[Botが収まるカバーを別に製作](https://github.com/ixsiid/m5stack-echonet-evps/releases/tag/v0.0.1)し覆うように設置しました。
 
 <img
  src="https://user-images.githubusercontent.com/35385895/208041078-f824fefc-06e3-4543-bd30-6275e6d588b6.jpg" width="20%" /><img
