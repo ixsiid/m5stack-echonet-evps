@@ -27,12 +27,12 @@ int UDPSocket::write(const esp_ip_addr_t *addr, uint16_t port, const uint8_t *da
 	dest.sin_family = AF_INET;
 
 	int len = sendto(sock, data, length, 0, (struct sockaddr *)&dest, sizeof(dest));
-	ESP_LOGI(TAG, "sock %d, data length %d, %8x:%d", sock, length, dest.sin_addr.s_addr, dest.sin_port);
+	// ESP_LOGI(TAG, "sock %d, data length %d, %8x:%d", sock, length, dest.sin_addr.s_addr, dest.sin_port);
 	// ESP_LOG_BUFFER_HEXDUMP(TAG, data, length, ESP_LOG_INFO);
 	if (len < 0) {
 		ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
 	} else {
-		ESP_LOGI(TAG, "Message sent");
+		// ESP_LOGI(TAG, "Message sent");
 	}
 
 	return len;
@@ -86,7 +86,7 @@ int UDPSocket::read(uint8_t *buffer, size_t buffer_length, esp_ip_addr_t *remote
 	} else {
 		// Data received
 		buffer[len] = 0;  // Null-terminate whatever we received and treat like a string
-		ESP_LOGI(TAG, "Received %d bytes from host", len);
+		// ESP_LOGI(TAG, "Received %d bytes from host", len);
 		// ESP_LOGI(TAG, "%s", rx_buffer);
 	}
 
