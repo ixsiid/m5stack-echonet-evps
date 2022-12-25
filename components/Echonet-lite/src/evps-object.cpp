@@ -4,7 +4,7 @@
 
 /// ELObject
 
-#define ___tag "EL-Object"
+#define ___tag "EL Object"
 
 uint8_t ELObject::buffer[]	 = {};
 size_t ELObject::buffer_length = sizeof(elpacket_t);
@@ -28,7 +28,7 @@ int ELObject::send(UDPSocket* udp, const esp_ip_addr_t* addr) {
 }
 
 bool ELObject::process(const elpacket_t* recv, uint8_t* epcs) {
-	ESP_LOGI(___tag, "Profile: process");
+	// ESP_LOGI(___tag, "Profile: process");
 	// GET
 	p->packet_id = recv->packet_id;
 	if (recv->esv == 0x62 || recv->esv == 0x61 || recv->esv == 0x60) {
@@ -190,7 +190,7 @@ EVPS::EVPS(uint8_t instance) : ELObject(), evps{} {
 };
 
 uint8_t EVPS::set(uint8_t* epcs, uint8_t count) {
-	ESP_LOGI(___tag, "EVPS: get %d", count);
+	// ESP_LOGI(___tag, "EVPS: get %d", count);
 	p->src_device_class = _class_id;
 	p->src_device_id	= _instance;
 

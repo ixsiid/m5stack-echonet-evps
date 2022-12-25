@@ -41,11 +41,6 @@ extern "C" {
 void app_main();
 }
 
-// static const char *tag = "NimBLE_BLE_CENT";
-
-static SwitchBotClient * __sb;
-static bool mode_notify = false;
-
 void app_main(void) {
 	/* Initialize NVS — it is used to store PHY calibration data */
 	esp_err_t ret = nvs_flash_init();
@@ -55,7 +50,7 @@ void app_main(void) {
 	}
 	ESP_ERROR_CHECK(ret);
 
-	SwitchBotClient *sb = new SwitchBotClient(SB_MAC);
+	static SwitchBotClient *sb = new SwitchBotClient(SB_MAC);
 
 	/*
 	while (true) {
@@ -121,10 +116,7 @@ void app_main(void) {
 	Profile *profile = new Profile();
 	EVPS *evps	  = new EVPS(1);
 
-	__sb = sb;
-
 	evps->set_update_mode_cb([](EVPS_Mode current_mode, EVPS_Mode request_mode) {
-		mode_notify = true;
 		EVPS_Mode next_mode;
 		switch (request_mode) {
 			case EVPS_Mode::Charge:
@@ -138,8 +130,13 @@ void app_main(void) {
 			default:
 				return EVPS_Mode::Unacceptable;
 		}
-		if (current_mode != next_mode) __sb->press();
-		return next_mode;
+
+		// モード繊維がないため、何もしない
+		if (current_mode == next_mode) return current_mode;
+
+		bool press_result = sb->press_async();
+		ESP_LOGI(tag, "Press: %d", press_result);;
+		return press_result ? next_mode : current_mode;
 	});
 
 	uint8_t rBuffer[EL_BUFFER_SIZE];
@@ -153,17 +150,18 @@ void app_main(void) {
 
 	while (true) {
 		vTaskDelay(100 / portTICK_PERIOD_MS);
-		ESP_LOGI(tag, "Idling");
 
 		packetSize = udp->read(rBuffer, EL_BUFFER_SIZE, &remote_addr);
 
 		if (packetSize > 0) {
+			if (epcs[0] == 0xda) {
 			ESP_LOGI("EL Packet", "(%04x, %04x) %04x-%02x -> %04x-%02x: ESV %02x [%02x]",
 				    p->_1081, p->packet_id,
 				    p->src_device_class, p->src_device_id,
 				    p->dst_device_class, p->dst_device_id,
 				    p->esv, p->epc_count);
 			ESP_LOG_BUFFER_HEXDUMP("EL Packet", epcs, packetSize - sizeof(elpacket_t), ESP_LOG_INFO);
+			}
 
 			uint8_t epc_res_count = 0;
 			switch (p->dst_device_class) {
@@ -178,13 +176,6 @@ void app_main(void) {
 					epc_res_count = evps->process(p, epcs);
 					if (epc_res_count > 0) {
 						evps->send(udp, &remote_addr);
-						/*
-						if (mode_notify) {
-							evps->notify_mode();
-							evps->send(udp, &multi_addr);
-							mode_notify = false;
-						}
-						*/
 						continue;
 					}
 					break;
