@@ -20,11 +20,15 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
+#include <M5GFX.h>
+
 #include <switchbot_client.hpp>
 #include <button.hpp>
 #include <wifiManager.hpp>
 #include <udp-socket.hpp>
 #include <evps-object.hpp>
+
+#include "NatureLogo.hpp"
 
 #include "wifi_credential.h"
 /**
@@ -37,61 +41,60 @@
 
 #define tag "SBC"
 
+M5GFX display;
+
 extern "C" {
 void app_main();
 }
 
 void app_main(void) {
+	ESP_LOGI(tag, "Start");
+	esp_err_t ret;
+
 	/* Initialize NVS — it is used to store PHY calibration data */
-	esp_err_t ret = nvs_flash_init();
+	ret = nvs_flash_init();
 	if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
 		ESP_ERROR_CHECK(nvs_flash_erase());
 		ret = nvs_flash_init();
 	}
 	ESP_ERROR_CHECK(ret);
 
+	display.init();
+	display.startWrite();
+
+	display.setBrightness(64);
+	display.setColorDepth(lgfx::v1::color_depth_t::rgb565_2Byte);
+	display.fillScreen(TFT_GREENYELLOW);
+
 	static SwitchBotClient *sb = new SwitchBotClient(SB_MAC);
 
-	/*
-	while (true) {
-		sb->press();
-		vTaskDelay(30 * 1000 / portTICK_PERIOD_MS);
-	}
-	*/
-	xTaskCreatePinnedToCore([](void *_sb) {
-		// Nimble使うと39（Button A）が干渉するっぽい
-		const uint8_t buttonPins[] = {37, 38};
+	// ATOMS3
+	const uint8_t buttonPins[] = {41};
+	static Button *button = new Button(buttonPins, sizeof(buttonPins));
 
-		Button *button		= new Button(buttonPins, 2);
-		SwitchBotClient *sb = (SwitchBotClient *)_sb;
-
+	xTaskCreatePinnedToCore([](void *_) {
 		while (true) {
 			// Main loop
-			vTaskDelay(1);
+			vTaskDelay(100 / portTICK_RATE_MS);
 
 			button->check(nullptr, [&](uint8_t pin) {
 				switch (pin) {
-					case 37:
-						ESP_LOGI(tag, "released gpio 37");
+					case 41:
+						ESP_LOGI(tag, "released gpio 41");
 						sb->press();
-						break;
-					case 38:
-						ESP_LOGI(tag, "released gpio 38");
-						sb->push();
-						break;
-					case 39:
-						ESP_LOGI(tag, "released gpio 39");
-						sb->pull();
 						break;
 				}
 			});
 		}
-	}, "ButtonCheck", 4096, sb, 1, nullptr, 1);
+	}, "ButtonCheck", 2048, nullptr, 1, nullptr, 1);
 
 	vTaskDelay(3 * 1000 / portTICK_PERIOD_MS);
 
 	ret = WiFi::Connect(SSID, WIFI_PASSWORD);
-	if (!ret) ESP_LOGI("SBC", "IP: %s", WiFi::get_address());
+	if (!ret)
+		ESP_LOGI("SBC", "IP: %s", WiFi::get_address());
+	else
+		display.fillScreen(TFT_RED);
 
 	UDPSocket *udp = new UDPSocket();
 
@@ -112,6 +115,12 @@ void app_main(void) {
 	}
 
 	int packetSize;
+
+	static NatureLogo *logo;
+	static bool active = false;
+
+	logo = new NatureLogo(display.width(), display.height());
+	logo->draw(display, active);
 
 	Profile *profile = new Profile();
 	EVPS *evps	  = new EVPS(1);
@@ -135,8 +144,14 @@ void app_main(void) {
 		if (current_mode == next_mode) return current_mode;
 
 		bool press_result = sb->press_async();
-		ESP_LOGI(tag, "Press: %d", press_result);;
-		return press_result ? next_mode : current_mode;
+		ESP_LOGI(tag, "Press: %d", press_result);
+		if (!press_result) {
+			return current_mode;
+		}
+
+		active = (next_mode == EVPS_Mode::Charge);
+		logo->draw(display, active);
+		return next_mode;
 	});
 
 	uint8_t rBuffer[EL_BUFFER_SIZE];
@@ -155,12 +170,12 @@ void app_main(void) {
 
 		if (packetSize > 0) {
 			if (epcs[0] == 0xda) {
-			ESP_LOGI("EL Packet", "(%04x, %04x) %04x-%02x -> %04x-%02x: ESV %02x [%02x]",
-				    p->_1081, p->packet_id,
-				    p->src_device_class, p->src_device_id,
-				    p->dst_device_class, p->dst_device_id,
-				    p->esv, p->epc_count);
-			ESP_LOG_BUFFER_HEXDUMP("EL Packet", epcs, packetSize - sizeof(elpacket_t), ESP_LOG_INFO);
+				ESP_LOGI("EL Packet", "(%04x, %04x) %04x-%02x -> %04x-%02x: ESV %02x [%02x]",
+					    p->_1081, p->packet_id,
+					    p->src_device_class, p->src_device_id,
+					    p->dst_device_class, p->dst_device_id,
+					    p->esv, p->epc_count);
+				ESP_LOG_BUFFER_HEXDUMP("EL Packet", epcs, packetSize - sizeof(elpacket_t), ESP_LOG_INFO);
 			}
 
 			uint8_t epc_res_count = 0;
