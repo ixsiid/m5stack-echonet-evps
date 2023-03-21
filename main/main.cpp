@@ -20,11 +20,16 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
+#include <M5GFX.h>
+
 #include <switchbot_client.hpp>
 #include <button.hpp>
 #include <wifiManager.hpp>
+
 #include <udp-socket.hpp>
 #include <evps-object.hpp>
+
+#include "NatureLogo.hpp"
 
 #include "wifi_credential.h"
 /**
@@ -37,69 +42,69 @@
 
 #define tag "SBC"
 
+M5GFX display;
+bool active = false;
+
 extern "C" {
 void app_main();
 }
 
 void app_main(void) {
+	ESP_LOGI(tag, "Start");
+	esp_err_t ret;
+
 	/* Initialize NVS — it is used to store PHY calibration data */
-	esp_err_t ret = nvs_flash_init();
+	ret = nvs_flash_init();
 	if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
 		ESP_ERROR_CHECK(nvs_flash_erase());
 		ret = nvs_flash_init();
 	}
 	ESP_ERROR_CHECK(ret);
 
+	display.init();
+	display.startWrite();
+
+	display.setBrightness(64);
+	display.setColorDepth(lgfx::v1::color_depth_t::rgb565_2Byte);
+	display.fillScreen(TFT_GREENYELLOW);
+
 	static SwitchBotClient *sb = new SwitchBotClient(SB_MAC);
 
-	/*
-	while (true) {
-		sb->press();
-		vTaskDelay(30 * 1000 / portTICK_PERIOD_MS);
-	}
-	*/
-	xTaskCreatePinnedToCore([](void *_sb) {
-		// Nimble使うと39（Button A）が干渉するっぽい
-		const uint8_t buttonPins[] = {37, 38};
+	// ATOMS3
+	const uint8_t buttonPins[] = {41};
+	static Button *button = new Button(buttonPins, sizeof(buttonPins));
 
-		Button *button		= new Button(buttonPins, 2);
-		SwitchBotClient *sb = (SwitchBotClient *)_sb;
-
+	xTaskCreatePinnedToCore([](void *_) {
 		while (true) {
 			// Main loop
-			vTaskDelay(1);
+			vTaskDelay(100 / portTICK_RATE_MS);
 
 			button->check(nullptr, [&](uint8_t pin) {
 				switch (pin) {
-					case 37:
-						ESP_LOGI(tag, "released gpio 37");
+					case 41:
+						ESP_LOGI(tag, "released gpio 41");
 						sb->press();
-						break;
-					case 38:
-						ESP_LOGI(tag, "released gpio 38");
-						sb->push();
-						break;
-					case 39:
-						ESP_LOGI(tag, "released gpio 39");
-						sb->pull();
 						break;
 				}
 			});
 		}
-	}, "ButtonCheck", 4096, sb, 1, nullptr, 1);
+	}, "ButtonCheck", 2048, nullptr, 1, nullptr, 1);
 
 	vTaskDelay(3 * 1000 / portTICK_PERIOD_MS);
 
 	ret = WiFi::Connect(SSID, WIFI_PASSWORD);
-	if (!ret) ESP_LOGI("SBC", "IP: %s", WiFi::get_address());
+	if (!ret)
+		ESP_LOGI("SBC", "IP: %s", WiFi::get_address());
+	else
+		display.fillScreen(TFT_RED);
 
 	UDPSocket *udp = new UDPSocket();
 
 	esp_ip_addr_t _multi;
 	_multi.type		   = ESP_IPADDR_TYPE_V4;
-	_multi.u_addr.ip4.addr = ipaddr_addr(EL_MULTICAST_IP);
+	_multi.u_addr.ip4.addr = ipaddr_addr(ELConstant::EL_MULTICAST_IP);
 
-	if (udp->beginReceive(EL_PORT)) {
+	if (udp->beginReceive(ELConstant::EL_PORT)) {
 		ESP_LOGI(tag, "EL.udp.begin successful.");
 	} else {
 		ESP_LOGI(tag, "Reseiver udp.begin failed.");	 // localPort
@@ -111,75 +116,40 @@ void app_main(void) {
 		ESP_LOGI(tag, "Reseiver EL.udp.beginMulticast failed.");  // localPort
 	}
 
-	int packetSize;
+	static NatureLogo *logo;
 
-	Profile *profile = new Profile();
+	logo = new NatureLogo(display.width(), display.height());
+	logo->draw(display, active);
+	
+
+	Profile *profile = new Profile(1, 13);
 	EVPS *evps	  = new EVPS(1);
 
-	evps->set_update_mode_cb([](EVPS_Mode current_mode, EVPS_Mode request_mode) {
-		EVPS_Mode next_mode;
-		switch (request_mode) {
-			case EVPS_Mode::Charge:
-				next_mode = EVPS_Mode::Charge;
-				break;
-			case EVPS_Mode::Stanby:
-			case EVPS_Mode::Stop:
-			case EVPS_Mode::Auto:
-				next_mode = EVPS_Mode::Stanby;
-				break;
-			default:
-				return EVPS_Mode::Unacceptable;
-		}
+	profile->add(evps);
+	evps->set_cb = [](ELObject * obj, uint8_t epc, uint8_t length, uint8_t* current_buffer, uint8_t* request_buffer) {
+		ESP_LOGI(tag, "Request: %hx -> %hx", current_buffer[0], request_buffer[0]);
 
-		// モード繊維がないため、何もしない
-		if (current_mode == next_mode) return current_mode;
+		EVPS::Mode current = static_cast<EVPS::Mode>(current_buffer[0]);
+		EVPS::Mode request = static_cast<EVPS::Mode>(request_buffer[0]);
+
+		// 充電と待機以外は無視
+		if (request != EVPS::Mode::Charge && request != EVPS::Mode::Stanby) return ELObject::SetRequestResult::Reject;
+
+		if (current == request) return ELObject::SetRequestResult::Accept;
 
 		bool press_result = sb->press_async();
-		ESP_LOGI(tag, "Press: %d", press_result);;
-		return press_result ? next_mode : current_mode;
-	});
+		ESP_LOGI(tag, "Press: %d", press_result);
+		if (!press_result) return ELObject::SetRequestResult::Reject;
 
-	uint8_t rBuffer[EL_BUFFER_SIZE];
-	elpacket_t *p = (elpacket_t *)rBuffer;
-	uint8_t *epcs = rBuffer + sizeof(elpacket_t);
+		active = (request == EVPS::Mode::Charge);
+		logo->draw(display, active);
+		current_buffer[0] = request_buffer[0];
+		return ELObject::SetRequestResult::Accept;
+	};
 
-	esp_ip_addr_t remote_addr;
-	// esp_ip_addr_t multi_addr;
-	// multi_addr.u_addr.ip4.addr = esp_ip4addr_aton(EL_MULTICAST_IP);
-	// ESP_LOGI("Multicast addr", "%x", multi_addr.u_addr.ip4.addr);
-
+	Profile::el_packet_buffer_t buffer;
 	while (true) {
 		vTaskDelay(100 / portTICK_PERIOD_MS);
-
-		packetSize = udp->read(rBuffer, EL_BUFFER_SIZE, &remote_addr);
-
-		if (packetSize > 0) {
-			if (epcs[0] == 0xda) {
-			ESP_LOGI("EL Packet", "(%04x, %04x) %04x-%02x -> %04x-%02x: ESV %02x [%02x]",
-				    p->_1081, p->packet_id,
-				    p->src_device_class, p->src_device_id,
-				    p->dst_device_class, p->dst_device_id,
-				    p->esv, p->epc_count);
-			ESP_LOG_BUFFER_HEXDUMP("EL Packet", epcs, packetSize - sizeof(elpacket_t), ESP_LOG_INFO);
-			}
-
-			uint8_t epc_res_count = 0;
-			switch (p->dst_device_class) {
-				case 0xf00e:
-					epc_res_count = profile->process(p, epcs);
-					if (epc_res_count > 0) {
-						profile->send(udp, &remote_addr);
-						continue;
-					}
-					break;
-				case 0x7e02:
-					epc_res_count = evps->process(p, epcs);
-					if (epc_res_count > 0) {
-						evps->send(udp, &remote_addr);
-						continue;
-					}
-					break;
-			}
-		}
+		profile->process_all_instance(udp, &buffer);
 	}
 }
