@@ -1386,7 +1386,7 @@ CONFIG_WPA_MBEDTLS_CRYPTO=y
 # CONFIG_WPA_WPS_STRICT is not set
 # CONFIG_WPA_11KV_SUPPORT is not set
 # CONFIG_WPA_MBO_SUPPORT is not set
-# CONFIG_WPA_DPP_SUPPORT is not set
+CONFIG_WPA_DPP_SUPPORT=y
 # end of Supplicant
 # end of Component config
 

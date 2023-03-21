@@ -22,22 +22,24 @@
 
 #include <M5GFX.h>
 
-#include <switchbot_client.hpp>
+// #include <switchbot_client.hpp>
 #include <button.hpp>
-#include <wifiManager.hpp>
+// #include <wifiManager.hpp>
 
-#include <udp-socket.hpp>
-#include <evps-object.hpp>
+#include <easy-wifi.hpp>
+
+// #include <udp-socket.hpp>
+// #include <evps-object.hpp>
 
 #include "NatureLogo.hpp"
 
-#include "wifi_credential.h"
+// #include "wifi_credential.h"
 /**
 #define SSID "your_ssid"
 #define WIFI_PASSWORD "your_wifi_password"
  */
 
-#include "switchbot_macaddr.h"
+// #include "switchbot_macaddr.h"
 // #define SB_MAC "your_switchbot_mac_address" // "01:23:45:68:89:ab"
 
 #define tag "SBC"
@@ -68,6 +70,7 @@ void app_main(void) {
 	display.setColorDepth(lgfx::v1::color_depth_t::rgb565_2Byte);
 	display.fillScreen(TFT_GREENYELLOW);
 
+	/*
 	static SwitchBotClient *sb = new SwitchBotClient(SB_MAC);
 
 	// ATOMS3
@@ -115,6 +118,7 @@ void app_main(void) {
 	} else {
 		ESP_LOGI(tag, "Reseiver EL.udp.beginMulticast failed.");  // localPort
 	}
+	*/
 
 	static NatureLogo *logo;
 
@@ -122,6 +126,7 @@ void app_main(void) {
 	logo->draw(display, active);
 	
 
+	/*
 	Profile *profile = new Profile(1, 13);
 	EVPS *evps	  = new EVPS(1);
 
@@ -153,5 +158,13 @@ void app_main(void) {
 	while (true) {
 		vTaskDelay(100 / portTICK_PERIOD_MS);
 		profile->process_all_instance(udp, &buffer);
+	}
+	*/
+
+	EasyWiFi::wait_connection();
+
+	while (true) {
+		vTaskDelay(3000 / portTICK_PERIOD_MS);
+		ESP_LOGI(tag, "idle");
 	}
 }
