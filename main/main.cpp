@@ -126,6 +126,8 @@ void app_main(void) {
 	EVPS *evps	  = new EVPS(1);
 
 	profile->add(evps);
+
+	evps->update_remain_battery_ratio(0x32);
 	evps->set_cb = [](ELObject * obj, uint8_t epc, uint8_t length, uint8_t* current_buffer, uint8_t* request_buffer) {
 		ESP_LOGI(tag, "Request: %hx -> %hx", current_buffer[0], request_buffer[0]);
 
