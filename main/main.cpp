@@ -24,9 +24,7 @@
 
 // #include <switchbot_client.hpp>
 #include <button.hpp>
-// #include <wifiManager.hpp>
-
-#include <easy-wifi.hpp>
+#include <wifiManager.hpp>
 
 // #include <udp-socket.hpp>
 // #include <evps-object.hpp>
@@ -41,6 +39,9 @@
 
 // #include "switchbot_macaddr.h"
 // #define SB_MAC "your_switchbot_mac_address" // "01:23:45:68:89:ab"
+
+#include <qrcodegen.hpp>
+using namespace qrcodegen;
 
 #define tag "SBC"
 
@@ -118,15 +119,7 @@ void app_main(void) {
 	} else {
 		ESP_LOGI(tag, "Reseiver EL.udp.beginMulticast failed.");  // localPort
 	}
-	*/
-
-	static NatureLogo *logo;
-
-	logo = new NatureLogo(display.width(), display.height());
-	logo->draw(display, active);
 	
-
-	/*
 	Profile *profile = new Profile(1, 13);
 	EVPS *evps	  = new EVPS(1);
 
@@ -161,7 +154,26 @@ void app_main(void) {
 	}
 	*/
 
-	EasyWiFi::wait_connection();
+	WiFi::wait_connection([](const char * pairing_text) {
+		ESP_LOGI(tag, "%s", pairing_text);
+
+		QrCode qr = QrCode::encodeText(pairing_text, QrCode::Ecc::LOW);
+		int size = qr.getSize();
+		ESP_LOGI(tag, "QR size: %d", size);
+
+		for(int y = 0; y < size; y++) {
+			for (int x = 0; x < size; x++) {
+				printf(qr.getModule(x, y) ? "M" : " ");
+			}
+			printf("\n");
+		}
+	});
+
+	
+	static NatureLogo *logo;
+
+	logo = new NatureLogo(display.width(), display.height());
+	logo->draw(display, active);
 
 	while (true) {
 		vTaskDelay(3000 / portTICK_PERIOD_MS);

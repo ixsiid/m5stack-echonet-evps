@@ -30,6 +30,7 @@
 		"initializer_list": "cpp",
 		"list": "cpp",
 		"vector": "cpp",
-		"xmemory": "cpp"
+		"xmemory": "cpp",
+		"memory": "cpp"
 	}
 }
