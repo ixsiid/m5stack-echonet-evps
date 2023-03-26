@@ -26,8 +26,13 @@
 #include <button.hpp>
 #include <wifiManager.hpp>
 
-// #include <udp-socket.hpp>
-// #include <evps-object.hpp>
+#include <udp-socket.hpp>
+#include <ECHONETlite-object.hpp>
+#include <evps-object.hpp>
+#include <battery-object.hpp>
+#include <power-distribution-object.hpp>
+#include <pv-object.hpp>
+#include <water-heater-object.hpp>
 
 #include "NatureLogo.hpp"
 
@@ -67,9 +72,9 @@ void app_main(void) {
 	display.init();
 	display.startWrite();
 
-	display.setBrightness(64);
+	display.setBrightness(16);
 	display.setColorDepth(lgfx::v1::color_depth_t::rgb565_2Byte);
-	display.fillScreen(TFT_GREENYELLOW);
+	display.fillScreen(TFT_WHITE);
 
 	/*
 	static SwitchBotClient *sb = new SwitchBotClient(SB_MAC);
@@ -119,7 +124,7 @@ void app_main(void) {
 	} else {
 		ESP_LOGI(tag, "Reseiver EL.udp.beginMulticast failed.");  // localPort
 	}
-	
+
 	Profile *profile = new Profile(1, 13);
 	EVPS *evps	  = new EVPS(1);
 
@@ -154,29 +159,67 @@ void app_main(void) {
 	}
 	*/
 
-	WiFi::wait_connection([](const char * pairing_text) {
+	static uint16_t buffer[82 * 82] = {};
+	WiFi::wait_connection([](const char *pairing_text) {
 		ESP_LOGI(tag, "%s", pairing_text);
 
 		QrCode qr = QrCode::encodeText(pairing_text, QrCode::Ecc::LOW);
-		int size = qr.getSize();
+		int size	= qr.getSize();
 		ESP_LOGI(tag, "QR size: %d", size);
 
-		for(int y = 0; y < size; y++) {
+		for (int y = 0; y < size; y++) {
 			for (int x = 0; x < size; x++) {
-				printf(qr.getModule(x, y) ? "M" : " ");
+				uint16_t c					    = qr.getModule(x, y) ? 0x0000 : 0xffff;
+				buffer[(y * 2 + 0) * 82 + (x * 2 + 0)] = c;
+				buffer[(y * 2 + 0) * 82 + (x * 2 + 1)] = c;
+				buffer[(y * 2 + 1) * 82 + (x * 2 + 0)] = c;
+				buffer[(y * 2 + 1) * 82 + (x * 2 + 1)] = c;
 			}
-			printf("\n");
 		}
+
+		display.pushImage(23, 23, 82, 82, buffer);
 	});
 
-	
 	static NatureLogo *logo;
 
 	logo = new NatureLogo(display.width(), display.height());
 	logo->draw(display, active);
 
+	UDPSocket *udp = new UDPSocket();
+
+	esp_ip_addr_t _multi;
+	_multi.type		   = ESP_IPADDR_TYPE_V4;
+	_multi.u_addr.ip4.addr = ipaddr_addr(ELConstant::EL_MULTICAST_IP);
+
+	if (udp->beginReceive(ELConstant::EL_PORT)) {
+		ESP_LOGI(tag, "EL.udp.begin successful.");
+	} else {
+		ESP_LOGI(tag, "Reseiver udp.begin failed.");	 // localPort
+	}
+
+	if (udp->beginMulticastReceive(&_multi)) {
+		ESP_LOGI(tag, "EL.udp.beginMulticast successful.");
+	} else {
+		ESP_LOGI(tag, "Reseiver EL.udp.beginMulticast failed.");  // localPort
+	}
+
+	Profile *profile	  = new Profile(1, 13);
+	EVPS *evps		  = new EVPS(0);
+	Battery *battery	  = new Battery(1);
+	PowerDistribution *pd = new PowerDistribution(2);
+	PV *pv			  = new PV(3);
+	WaterHeater *wh	  = new WaterHeater(4);
+
+	profile
+	    ->add(evps)
+	    ->add(battery)
+	    ->add(pd)
+	    ->add(pv)
+	    ->add(wh);
+
+	Profile::el_packet_buffer_t el_packet;
 	while (true) {
-		vTaskDelay(3000 / portTICK_PERIOD_MS);
-		ESP_LOGI(tag, "idle");
+		vTaskDelay(200 / portTICK_PERIOD_MS);
+		profile->process_all_instance(udp, &el_packet);
 	}
 }
