@@ -62,7 +62,7 @@ void app_main(void) {
 
 	led = new RMT_WS2812(RMT_WS2812::esp_board::ATOMS3_lite);
 	led->clear();
-	led->setBrightness(20);
+	led->setBrightness(5);
 
 	static SwitchBotClient *sb = new SwitchBotClient(SB_MAC);
 
@@ -84,18 +84,18 @@ void app_main(void) {
 				}
 			});
 		}
-	},
-					    "ButtonCheck", 2048, nullptr, 1, nullptr, 1);
+	}, "ButtonCheck", 2048, nullptr, 1, nullptr, 1);
 
 	vTaskDelay(3 * 1000 / portTICK_PERIOD_MS);
 
 	ret = WiFi::Connect(SSID, WIFI_PASSWORD);
 	if (!ret) {
 		ESP_LOGI("SBC", "IP: %s", WiFi::get_address());
-		led->setPixel(0, 0, 255, 255);
+		led->setPixel(0, 255, 255, 0);
 	} else {
 		led->setPixel(0, 255, 0, 0);
 	}
+	led->refresh();
 
 	UDPSocket *udp = new UDPSocket();
 
@@ -140,8 +140,9 @@ void app_main(void) {
 		if (active) {
 			led->setPixel(0, 0, 255, 0);
 		} else {
-			led->setPixel(0, 0, 255, 255);
+			led->setPixel(0, 255, 255, 0);
 		}
+		led->refresh();
 		current_buffer[0] = request_buffer[0];
 		return ELObject::SetRequestResult::Accept;
 	};
