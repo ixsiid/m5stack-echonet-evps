@@ -20,7 +20,7 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
-#include <M5GFX.h>
+#include <RMT_WS2812.hpp>
 
 #include <switchbot_client.hpp>
 #include <button.hpp>
@@ -28,8 +28,6 @@
 
 #include <udp-socket.hpp>
 #include <evps-object.hpp>
-
-#include "NatureLogo.hpp"
 
 #include "wifi_credential.h"
 /**
@@ -42,12 +40,13 @@
 
 #define tag "SBC"
 
-M5GFX display;
 bool active = false;
 
 extern "C" {
 void app_main();
 }
+
+static RMT_WS2812 *led;
 
 void app_main(void) {
 	ESP_LOGI(tag, "Start");
@@ -61,18 +60,15 @@ void app_main(void) {
 	}
 	ESP_ERROR_CHECK(ret);
 
-	display.init();
-	display.startWrite();
-
-	display.setBrightness(64);
-	display.setColorDepth(lgfx::v1::color_depth_t::rgb565_2Byte);
-	display.fillScreen(TFT_GREENYELLOW);
+	led = new RMT_WS2812(RMT_WS2812::esp_board::ATOMS3_lite);
+	led->clear();
+	led->setBrightness(20);
 
 	static SwitchBotClient *sb = new SwitchBotClient(SB_MAC);
 
 	// ATOMS3
 	const uint8_t buttonPins[] = {41};
-	static Button *button = new Button(buttonPins, sizeof(buttonPins));
+	static Button *button	  = new Button(buttonPins, sizeof(buttonPins));
 
 	xTaskCreatePinnedToCore([](void *_) {
 		while (true) {
@@ -88,15 +84,18 @@ void app_main(void) {
 				}
 			});
 		}
-	}, "ButtonCheck", 2048, nullptr, 1, nullptr, 1);
+	},
+					    "ButtonCheck", 2048, nullptr, 1, nullptr, 1);
 
 	vTaskDelay(3 * 1000 / portTICK_PERIOD_MS);
 
 	ret = WiFi::Connect(SSID, WIFI_PASSWORD);
-	if (!ret)
+	if (!ret) {
 		ESP_LOGI("SBC", "IP: %s", WiFi::get_address());
-	else
-		display.fillScreen(TFT_RED);
+		led->setPixel(0, 0, 255, 255);
+	} else {
+		led->setPixel(0, 255, 0, 0);
+	}
 
 	UDPSocket *udp = new UDPSocket();
 
@@ -116,19 +115,13 @@ void app_main(void) {
 		ESP_LOGI(tag, "Reseiver EL.udp.beginMulticast failed.");  // localPort
 	}
 
-	static NatureLogo *logo;
-
-	logo = new NatureLogo(display.width(), display.height());
-	logo->draw(display, active);
-	
-
 	Profile *profile = new Profile(1, 13);
 	EVPS *evps	  = new EVPS(1);
 
 	profile->add(evps);
 
 	evps->update_remain_battery_ratio(0x32);
-	evps->set_cb = [](ELObject * obj, uint8_t epc, uint8_t length, uint8_t* current_buffer, uint8_t* request_buffer) {
+	evps->set_cb = [](ELObject *obj, uint8_t epc, uint8_t length, uint8_t *current_buffer, uint8_t *request_buffer) {
 		ESP_LOGI(tag, "Request: %hx -> %hx", current_buffer[0], request_buffer[0]);
 
 		EVPS::Mode current = static_cast<EVPS::Mode>(current_buffer[0]);
@@ -144,7 +137,11 @@ void app_main(void) {
 		if (!press_result) return ELObject::SetRequestResult::Reject;
 
 		active = (request == EVPS::Mode::Charge);
-		logo->draw(display, active);
+		if (active) {
+			led->setPixel(0, 0, 255, 0);
+		} else {
+			led->setPixel(0, 0, 255, 255);
+		}
 		current_buffer[0] = request_buffer[0];
 		return ELObject::SetRequestResult::Accept;
 	};

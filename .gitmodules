@@ -4,9 +4,9 @@
 [submodule "components/WiFiManager"]
 	path = components/WiFiManager
 	url = https://github.com/ixsiid/WiFiManager.git
-[submodule "components/M5GFX"]
-	path = components/M5GFX
-	url = https://github.com/m5stack/M5GFX.git
 [submodule "components/esp-ECHONET-Lite"]
 	path = components/esp-ECHONET-Lite
 	url = https://github.com/ixsiid/esp-ECHONET-Lite.git
+[submodule "components/simple_ws2812_rmt_esp-idf"]
+	path = components/simple_ws2812_rmt_esp-idf
+	url = https://github.com/ixsiid/simple_ws2812_rmt_esp-idf.git
