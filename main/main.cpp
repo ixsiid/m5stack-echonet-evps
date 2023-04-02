@@ -72,7 +72,7 @@ void app_main(void) {
 	display.init();
 	display.startWrite();
 
-	display.setBrightness(16);
+	display.setBrightness(1);
 	display.setColorDepth(lgfx::v1::color_depth_t::rgb565_2Byte);
 	display.fillScreen(TFT_WHITE);
 
@@ -159,27 +159,30 @@ void app_main(void) {
 	}
 	*/
 
-	static uint16_t buffer[82 * 82] = {};
+	static const int size = QrCode::size;
+	static const int size2 = 2 * size;
+	static uint16_t buffer[QrCode::size * QrCode::size * 2 * 2] = {};
 	WiFi::wait_connection([](const char *pairing_text) {
 		ESP_LOGI(tag, "%s", pairing_text);
-
-		QrCode qr = QrCode::encodeText(pairing_text, QrCode::Ecc::LOW);
-		int size	= qr.getSize();
-		ESP_LOGI(tag, "QR size: %d", size);
+		QrCode qr = QrCode::encodeText(pairing_text);
 
 		for (int y = 0; y < size; y++) {
 			for (int x = 0; x < size; x++) {
-				uint16_t c					    = qr.getModule(x, y) ? 0x0000 : 0xffff;
-				buffer[(y * 2 + 0) * 82 + (x * 2 + 0)] = c;
-				buffer[(y * 2 + 0) * 82 + (x * 2 + 1)] = c;
-				buffer[(y * 2 + 1) * 82 + (x * 2 + 0)] = c;
-				buffer[(y * 2 + 1) * 82 + (x * 2 + 1)] = c;
+				uint16_t c = qr.getModule(x, y) ? 0x0000 : 0xffff;
+
+				buffer[(y * 2 + 0) * size2 + (x * 2 + 0)] = c;
+				buffer[(y * 2 + 0) * size2 + (x * 2 + 1)] = c;
+				buffer[(y * 2 + 1) * size2 + (x * 2 + 0)] = c;
+				buffer[(y * 2 + 1) * size2 + (x * 2 + 1)] = c;
 			}
 		}
 
-		display.pushImage(23, 23, 82, 82, buffer);
+		display.setBrightness(48);
+		display.pushImage(23, 23, size2, size2, buffer);
 	});
 
+
+	display.setBrightness(16);
 	static NatureLogo *logo;
 
 	logo = new NatureLogo(display.width(), display.height());
