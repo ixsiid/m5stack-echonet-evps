@@ -10,3 +10,6 @@
 [submodule "components/esp-ECHONET-Lite"]
 	path = components/esp-ECHONET-Lite
 	url = https://github.com/ixsiid/esp-ECHONET-Lite.git
+[submodule "components/simple-nimble-central"]
+	path = components/simple-nimble-central
+	url = https://github.com/ixsiid/simple-nimble-central.git
